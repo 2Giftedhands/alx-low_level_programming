@@ -1,4 +1,4 @@
-# Recursion]
+# [Recursion]
 
 **Software Engineering** at **ALX**. Learning about recursion and how to implement it in **C language**.
 
