@@ -3,7 +3,8 @@
 /**
  * print_binary - prints the binary equivalent of a decimal number
  * The function prints the binary representation without leading zeros,
- * and it is limited to handling 64-bit numbers due to the loop's initialization with i = 63.
+ * and it is limited to handling 64-bit numbers
+ * due to the loop's initialization with i = 63.
  * @n: number to print in binary
  */
 
