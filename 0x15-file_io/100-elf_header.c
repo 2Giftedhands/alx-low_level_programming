@@ -1,134 +1,74 @@
+#include "main.h"
 #include <elf.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-
-void check_elf(unsigned char *e_ident);
-void print_magic(unsigned char *e_ident);
-void print_class(unsigned char *e_ident);
-void print_data(unsigned char *e_ident);
-void print_version(unsigned char *e_ident);
-void print_abi(unsigned char *e_ident);
-void print_osabi(unsigned char *e_ident);
-void print_type(unsigned int e_type, unsigned char *e_ident);
-void print_entry(unsigned long int e_entry, unsigned char *e_ident);
-void close_elf(int elf);
+#include <fcntl.h>
 
 /**
- * check_elf - checks if a file is an ELF file.
- * @e_ident: pointer to an array containing the ELF magic numbers.
- *
- * Description: if the file is not an ELF file - exit code 98.
+ * main - check the code
+ * description: displays the information contained in
+ * the ELF header at the start of an ELF file
+ * @argc: number of arguments
+ * @argv: array of arguments
+ * Return: 0 on success, 98 on failure
  */
-
-/* Function to check if a file is an ELF file */
-void check_elf(unsigned char *e_ident)
+int main(int argc, char *argv[])
 {
-	/* Check if the first four bytes of the ELF header match the magic numbers */
-	int index;
-
-	for (index = 0; index < 4; index++)
-{
-		if (e_ident[index] != 127 &&
-		    e_ident[index] != 'E' &&
-		    e_ident[index] != 'L' &&
-		    e_ident[index] != 'F')
-		{
-			/* Print an error message and exit with code 98 if not an ELF file */
-			dprintf(STDERR_FILENO, "Error: Not an ELF file\n");
-			exit(98);
-		}
-	}
-}
-
-/**
- * print_magic - rints the magic numbers of an ELF header.
- * @e_ident: pointer to an array containing the ELF magic numbers.
- *
- * Description: magic numbers are separated by spaces.
- */
-
-
-/* Function to print magic numbers of an ELF header */
-void print_magic(unsigned char *e_ident)
-{
-	int index;
-
-	/* Print the magic numbers separated by spaces */
-	printf("  Magic:   ");
-	for (index = 0; index < EI_NIDENT; index++)
-	{
-		printf("%02x", e_ident[index]);
-		if (index == EI_NIDENT - 1)
-			printf("\n");
-		else
-			printf(" ");
-	}
-}
-
-/**
- * main - displays the information within the
- *        ELF header at the start of an ELF file.
- * @argc: number of arguments count in the program.
- * @argv: array of pointers to the arguments.
- *
- * Return: 0 if successful.
- *
- * Description: If the file is not an ELF File or
- *		function fails - exit code 98.
- */
-
-/* Main function */
-int main(int __attribute__((__unused__)) argc, char *argv[])
-{
+	int fd;
 	Elf64_Ehdr *header;
-	int fd, bytes_read;
 
-	/* Check if the correct number of arguments is provided */
 	if (argc != 2)
-	{
-		dprintf(STDERR_FILENO, "Usage: %s <ELF file>\n", argv[0]);
-		exit(98);
-	}
+		dprintf(STDERR_FILENO, "Usage: elf_header elf_filename\n"), exit(98);
 
-	/* Open the ELF file */
+	/* open file */
 	fd = open(argv[1], O_RDONLY);
 	if (fd == -1)
-	{
-		dprintf(STDERR_FILENO, "Error: Can't read file %s\n", argv[1]);
-		exit(98);
-	}
+		dprintf(STDERR_FILENO, "Error: Can't open file %s\n", argv[1]), exit(98);
 
-	/* Allocate memory for the ELF header */
+	/* read ELF header */
 	header = malloc(sizeof(Elf64_Ehdr));
 	if (header == NULL)
-	{
-		close_elf(fd);
-		dprintf(STDERR_FILENO, "Error: Memory allocation failed\n");
-		exit(98);
-	}
+		dprintf(STDERR_FILENO, "Error: malloc failed\n"), exit(98);
+	if (read(fd, header, sizeof(Elf64_Ehdr)) != sizeof(Elf64_Ehdr))
+		dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", argv[1]), exit(98);
 
-	/* Read the ELF header */
-	bytes_read = read(fd, header, sizeof(Elf64_Ehdr));
-	if (bytes_read == -1)
-	{
-		free(header);
-		close_elf(fd);
-		dprintf(STDERR_FILENO, "Error: Failed to read file %s\n", argv[1]);
-		exit(98);
-	}
+	/* check if file is ELF */
+	if (header->e_ident[EI_MAG0] != ELFMAG0 ||
+	    header->e_ident[EI_MAG1] != ELFMAG1 ||
+	    header->e_ident[EI_MAG2] != ELFMAG2 ||
+	    header->e_ident[EI_MAG3] != ELFMAG3)
+		dprintf(STDERR_FILENO, "Error: Not an ELF file\n"), exit(98);
 
-	check_elf(header->e_ident);
-
+	/* print ELF header */
 	printf("ELF Header:\n");
+	printf("  Magic:   %02x %02x %02x %02x\n",
+	       header->e_ident[EI_MAG0], header->e_ident[EI_MAG1],
+	       header->e_ident[EI_MAG2], header->e_ident[EI_MAG3]);
+	printf("  Class:                             %s\n",
+		   	       header->e_ident[EI_CLASS] == ELFCLASS32 ? "ELF32" : "ELF64");
+	printf("  Data:                              %s\n",
+		   	       header->e_ident[EI_DATA] == ELFDATA2LSB ? "2's complement, little endian" : "2's complement, big endian");
+	printf("  Version:                           %d (current)\n", header->e_ident[EI_VERSION]);
+	printf("  OS/ABI:                            %s\n",
+		   	       header->e_ident[EI_OSABI] == ELFOSABI_SYSV ? "UNIX - System V" : "UNIX - System V");
+	printf("  ABI Version:                       %d\n", header->e_ident[EI_ABIVERSION]);
+	printf("  Type:                              %s\n",
+		   	       header->e_type == ET_EXEC ? "EXEC (Executable file)" : "EXEC (Executable file)");
+	printf("  Entry point address:               0x%lx (bytes into file)\n", header->e_entry);
+	printf("  Start of program headers:          %d (bytes into file)\n", header->e_phoff);
+	printf("  Start of section headers:          %d (bytes into file)\n", header->e_shoff);
+	printf("  Flags:                             0x%x\n", header->e_flags);
+	printf("  Size of this header:               %d (bytes)\n", header->e_ehsize);
+	printf("  Size of program headers:           %d (bytes)\n", header->e_phentsize);
+	printf("  Number of program headers:         %d\n", header->e_phnum);
+	printf("  Size of section headers:           %d (bytes)\n", header->e_shentsize);
+	printf("  Number of section headers:         %d\n", header->e_shnum);
+	printf("  Section header string table index: %d\n", header->e_shstrndx);
 
-	print_magic(header->e_ident);
-
-	free(header);
-	close_elf(fd);
+	/* close file */
+	if (close(fd) == -1)
+		dprintf(STDERR_FILENO, "Error: Can't close fd %d\n", fd), exit(98);
 
 	return (0);
 }
