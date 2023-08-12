@@ -1,6 +1,6 @@
 # Project: File I/O
 
-Projects object to learn about how to handle files (open, close, read and write), file descriptors, system calls and file permissions in **C language**.
+Project objective: To learn how to handle files (open, close, read and write), file descriptors, system calls and file permissions in **C**.
 
 ## Technologies
 * C files are compiled using `gcc version 9.4.0`
